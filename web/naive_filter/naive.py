@@ -208,14 +208,89 @@ def conProbability():
     with open('../static/conproba.json', 'w') as file:
         json.dump(conproba, file)
 
+def unclassDataUji():
+    with open('../static/data_uji.json') as f:
+        data_uji = json.load(f)
+    unclass_data_uji = []
+    for item in data_uji:
+        temp={}
+        temp[item['judul']] = preprocessing(item['berita']).split()
+        unclass_data_uji.append(temp)
+
+    if os.path.exists('../static/unclass_data_uji.json'):
+        os.remove('../static/unclass_data_uji.json')
+    with open('../static/unclass_data_uji.json', 'w') as file:
+        json.dump(unclass_data_uji, file)
+
+def hasilKlasifikasi():
+    with open('../static/data_uji.json') as f:
+        data_uji = json.load(f)
+
+    with open('../static/unclass_data_uji.json') as f:
+        unclass_uji = json.load(f)
+
+    with open('../static/term_unik.json') as f:
+        term_unik = json.load(f)
+
+    with open('../static/conproba.json') as f:
+        conproba = json.load(f)
+
+    real_class_uji = {}
+    for item in data_uji:
+        real_class_uji[item['judul']]=item['cat']
+
+    if os.path.exists('../static/real_class_uji.json'):
+        os.remove('../static/real_class_uji.json')
+    with open('../static/real_class_uji.json', 'w') as file:
+        json.dump(real_class_uji, file)
+
+    unclass_data_uji_token = {}
+
+    for item in unclass_uji:
+        for key in item:
+            uniq = []
+            for val in item[key]:
+                if val in term_unik:
+                    uniq.append(val)
+            unclass_data_uji_token[key]=uniq
 
 
-# with open('../static/data.json') as file:
-#     data = json.load(file)
+    hasil_posterior = []
+    another_d=[]
+    for judul in unclass_data_uji_token:
+        # print(judul)
+        for key in conproba:
+            # print(len(conproba))
+            tes = []
+            value = {}
+            for val in conproba[key]:
+                if val in unclass_data_uji_token[judul]:
+                    con = 1
+                    con*=conproba[key][val]
+            another_d.append([key,con])
+        hasil_posterior.append(another_d[:len(conproba)])
+        for i in range(len(conproba)):
+            another_d.pop()
 
 
-with open('../static/data_uji.json') as f:
-    data_uji = json.load(f)
+    tesa = []
+    tesb = []
+
+    j=0
+    posterior_judul={}
+    final_clasifikasi = {}
+    for judul in unclass_data_uji_token:
+        for i in range(2):
+            label=hasil_posterior[j][i][0]
+            value=hasil_posterior[j][i][1]
+            posterior_judul[label]=value
+        final_clasifikasi[judul]=max(posterior_judul,key=posterior_judul.get)
+        j+=1
+
+    if os.path.exists('../static/final_clasifikasi.json'):
+        os.remove('../static/final_clasifikasi.json')
+    with open('../static/final_clasifikasi.json', 'w') as file:
+        json.dump(final_clasifikasi, file)
 
 with open('../static/data_latih.json') as f:
     data_latih = json.load(f)
@@ -226,88 +301,13 @@ termUnik()
 weighted_berita()
 conProbability()
 
-# def testing(data):
+with open('../static/real_class_uji.json') as f:
+    real_class_uji = json.load(f)
+with open('../static/final_clasifikasi.json') as f:
+    final_clasifikasi = json.load(f)
 
-# print(data_uji)
-
-unclass_data_uji = []
-# for item in data_uji:
-#     temp={}
-#     temp[item['judul']] = preprocessing(item['berita']).split()
-#     unclass_data_uji.append(temp)
-#
-# if os.path.exists('../static/unclass_data_uji.json'):
-#     os.remove('../static/unclass_data_uji.json')
-# with open('../static/unclass_data_uji.json', 'w') as file:
-#     json.dump(unclass_data_uji, file)
-
-with open('../static/unclass_data_uji.json') as f:
-    unclass_uji = json.load(f)
-
-with open('../static/term_unik.json') as f:
-    term_unik = json.load(f)
-
-with open('../static/conproba.json') as f:
-    conproba = json.load(f)
-
-real_class_uji = {}
-for item in data_uji:
-    real_class_uji[item['judul']]=item['cat']
-
-# print(real_class_uji)
-
-unclass_data_uji_token = {}
-
-for item in unclass_uji:
-    for key in item:
-        uniq = []
-        for val in item[key]:
-            if val in term_unik:
-                uniq.append(val)
-        unclass_data_uji_token[key]=uniq
-
-a = {'asin':['covid','sembuh','negatif','x'],'yayan':['covid-19','x','positif','yyang']}
-
-# print(conproba)
-
-hasil_posterior = []
-another_d=[]
-for judul in unclass_data_uji_token:
-    # print(judul)
-    for key in conproba:
-        # print(len(conproba))
-        tes = []
-        value = {}
-        for val in conproba[key]:
-            if val in unclass_data_uji_token[judul]:
-                con = 1
-                con*=conproba[key][val]
-        another_d.append([key,con])
-    hasil_posterior.append(another_d[:len(conproba)])
-    for i in range(len(conproba)):
-        another_d.pop()
-
-
-tesa = []
-tesb = []
-# print(hasil_posterior)
-
-j=0
-posterior_judul={}
-final_clasifikasi = {}
-for judul in unclass_data_uji_token:
-    for i in range(2):
-        label=hasil_posterior[j][i][0]
-        value=hasil_posterior[j][i][1]
-        posterior_judul[label]=value
-    final_clasifikasi[judul]=max(posterior_judul,key=posterior_judul.get)
-    j+=1
-import pandas as pd
-# print(final_clasifikasi)
-
-
-tes_uji_clss = final_clasifikasi
-real_uji_clss = real_class_uji
+unclassDataUji()
+hasilKlasifikasi()
 
 hasil_salah = 0
 hasil_benar = 0
@@ -326,35 +326,4 @@ print(f"\nHASIL KLASIFIKASI BENAR DAN SALAH:\n"
       f"Benar:{hasil_benar}\n"
       f"Salah:{hasil_salah}\n")
 
-
-
-
-
-
-
-
-
-
-
-
-connn_H = 0
-connn_V = 0
-for key in final_clasifikasi:
-    if final_clasifikasi[key]=='hoax':
-        connn_H+=1
-    if final_clasifikasi[key]=='valid':
-        connn_V+=1
-
-# print(connn_H)
-# print(connn_V)
-# print(connn_V+connn_H)
-# print(tesa,tesb)
-
-
-# a = 1
-# b=2
-# c = 100
-# print(1+math.log10(a))
-# print(1+math.log10(b))
-# print(1+math.log10(c))
 print("Program end at = ", datetime.now().time())

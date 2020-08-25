@@ -15,4 +15,3 @@ class TermUnikValue(models.Model):
     valid = models.FloatField(blank=False, null=False)
     hoax = models.FloatField(blank=False, null=False)
 
-

@@ -17,9 +17,16 @@ def sendtermUnik():
         data = json.loads(data.read())
 
     TermUnikValue.objects.all().delete()
-    for item in data:
-        TermUnikValue.objects.create(term_unik=item,valid=data[item]['valid'],hoax=data[item]['hoax'])
+
+    for label in data:
+        print(label)
+        for kata in data[label]:
+            nilai = data[label][kata]
+            print(kata)
+            print(nilai)
+            if TermUnikValue.objects.filter(term_unik=kata).exists():
+                TermUnikValue.objects.filter(term_unik=kata).update(valid=nilai)
+            else:TermUnikValue.objects.create(term_unik=kata,valid=999,hoax=nilai)
 
 
-sendtermUnik()
 
