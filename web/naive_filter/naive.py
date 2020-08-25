@@ -4,6 +4,7 @@ import re
 import json
 from datetime import datetime
 import os
+import math
 
 print("Program start at = ", datetime.now().time())
 
@@ -168,7 +169,9 @@ def weighted_berita():
             for item in categori_tokenize[key]:
                 if term_unik[i] == item:
                     score += 1
-            tes[term_unik[i]] = score
+            if score ==0:
+                tes[term_unik[i]] = score
+            else:tes[term_unik[i]] = 1+math.log10(score)
             waight_temp.append(score)
         weight_cat_dict[key] = tes
 
@@ -217,11 +220,11 @@ with open('../static/data_uji.json') as f:
 with open('../static/data_latih.json') as f:
     data_latih = json.load(f)
 
-# openFile(path_offData,ratio=2/10)
-# berita_terkategori(data_latih)
-# termUnik()
-# weighted_berita()
-# conProbability()
+openFile(path_offData,ratio=2/10)
+berita_terkategori(data_latih)
+termUnik()
+weighted_berita()
+conProbability()
 
 # def testing(data):
 
@@ -310,7 +313,7 @@ hasil_salah = 0
 hasil_benar = 0
 for item in final_clasifikasi:
     print(item)
-    print(f"\nhasil_klasifikasi: {final_clasifikasi[item]}"
+    print(f"hasil_klasifikasi: {final_clasifikasi[item]}"
           f"\nklasifikasi seharusnya:{real_class_uji[item]}")
     if real_class_uji[item] != final_clasifikasi[item]:
         print('TIDAK BENAR')
@@ -319,9 +322,9 @@ for item in final_clasifikasi:
         print('BENAR')
         hasil_benar+=1
 
-print(f"HASIL KLASIFIKASI BENAR DAN SALAH:\n"
+print(f"\nHASIL KLASIFIKASI BENAR DAN SALAH:\n"
       f"Benar:{hasil_benar}\n"
-      f"Salah:{hasil_salah}")
+      f"Salah:{hasil_salah}\n")
 
 
 
@@ -348,4 +351,10 @@ for key in final_clasifikasi:
 # print(tesa,tesb)
 
 
+# a = 1
+# b=2
+# c = 100
+# print(1+math.log10(a))
+# print(1+math.log10(b))
+# print(1+math.log10(c))
 print("Program end at = ", datetime.now().time())
