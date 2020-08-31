@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import Data
-from .form import DataForm
+from .tests import *
+from .form import *
 import json
 from django.http import JsonResponse
 import os
@@ -12,7 +13,47 @@ def index(request):
 
 
 def home(request):
-    return render(request, 'home/home.html')
+    form = InputForm()
+    hasil =''
+    prepro=''
+    if request.method == "POST":
+        # print('Printing Post:', request.POST)
+        # form = InputForm(request.POST)
+        # if form.is_valid():
+        hasil = request.POST['berita']
+
+        prepro = preprocessing(hasil).split()
+        hasil_klasifikasi = {}
+        jumlah_data = Data.objects.all()
+        jumlah_data_hoax = Data.objects.filter(cat='hoax')
+        probabilitas_hoax=(jumlah_data_hoax.count())/jumlah_data.count()
+        probabilitas_valid=(jumlah_data.count()-jumlah_data_hoax.count())/jumlah_data.count()
+        hoax = 1
+        valid = 1
+        tm = []
+        for item in prepro:
+            try:
+                if TermUnikValue.objects.get(term_unik=item):
+                    term = TermUnikValue.objects.get(term_unik=item)
+                    hoax = term.hoax
+                    print(term.term_unik)
+                    valid = term.valid
+            except: print('not found item')
+        print(f"hoax:{hoax}"
+              f"valid:{valid}\n")
+        print(prepro)
+        hasil_klasifikasi['hoax']=hoax*probabilitas_hoax
+        hasil_klasifikasi['valid']=valid*probabilitas_valid
+        if max(hasil_klasifikasi.values()) == 0:
+            hasil='Overflow'
+        else:
+            hasil=max(hasil_klasifikasi,key=hasil_klasifikasi.get)
+
+
+    context = {'form': form,'hasil':hasil}
+
+    return render(request, 'home/home.html', context)
+
 
 
 def admin(request):

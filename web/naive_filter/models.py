@@ -1,5 +1,4 @@
 from django.db import models
-import json
 
 # Create your models here.
 
@@ -14,4 +13,5 @@ class TermUnikValue(models.Model):
     term_unik = models.CharField(blank=False, null=False, max_length=150)
     valid = models.FloatField(blank=False, null=False)
     hoax = models.FloatField(blank=False, null=False)
+
 

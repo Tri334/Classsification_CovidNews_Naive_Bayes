@@ -1,6 +1,24 @@
 {% extends "home/index.html" %}{% load static %}{% block content %}
 
 <div>
+  <div class="">
+
   <a href="{% url 'add_data' %}">Develover?</a>
+
+  </div>
+
+  <div class="alert-link">
+    <br>
+    <form class="form-controll" action="{% url 'homes' %}" method="POST">
+    {% csrf_token %} {{form}}
+      <br>
+    <input class="btn-info" type="submit" name="Submit" />
+    </form>
+  </div>
+
+  <div class="box-flex">
+    <label>Hasil Klasifikasi: {{hasil}}</label>
+  </div>
+
 </div>
 {% endblock content %}

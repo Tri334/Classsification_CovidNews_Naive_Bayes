@@ -27,7 +27,11 @@ def preprocessing(berita):
     return stemmer.stem(token)
 
 def openFile(pathdata,ratio):
+    if os.path.exists('../offData/duplikat.txt'):
+        os.remove('../offData/duplikat.txt')
+    dupli = open('../offData/duplikat.txt', "a")
     all_data=[]
+    list_judul = []
     file = open(pathdata, encoding="utf8")
     soup = sp(file,'html5lib')
     doc_berita = soup.find_all("doc")
@@ -40,11 +44,19 @@ def openFile(pathdata,ratio):
         data['judul'] = juduls
         data['cat'] = preprocessing(cats)
         data['berita'] = beritas
-        all_data.append(data)
+        judul_filter = preprocessing(juduls)
+
+        if judul_filter not in list_judul:
+            list_judul.append(preprocessing(juduls))
+            all_data.append(data)
+        else:dupli.write(juduls)
+
+
 
     counter = 0
     counter_hoax = 0
     counter_valid = 0
+
 
     for item in all_data:
         if item['cat'] == 'valid':
@@ -208,9 +220,10 @@ def conProbability():
     with open('../static/conproba.json', 'w') as file:
         json.dump(conproba, file)
 
-def unclassDataUji():
+def unclassDatauji():
     with open('../static/data_uji.json') as f:
         data_uji = json.load(f)
+
     unclass_data_uji = []
     for item in data_uji:
         temp={}
@@ -223,8 +236,8 @@ def unclassDataUji():
         json.dump(unclass_data_uji, file)
 
 def hasilKlasifikasi():
-    with open('../static/data_uji.json') as f:
-        data_uji = json.load(f)
+    with open('../static/data_latih.json') as s:
+        data_latih = json.load(s)
 
     with open('../static/unclass_data_uji.json') as f:
         unclass_uji = json.load(f)
@@ -235,14 +248,6 @@ def hasilKlasifikasi():
     with open('../static/conproba.json') as f:
         conproba = json.load(f)
 
-    real_class_uji = {}
-    for item in data_uji:
-        real_class_uji[item['judul']]=item['cat']
-
-    if os.path.exists('../static/real_class_uji.json'):
-        os.remove('../static/real_class_uji.json')
-    with open('../static/real_class_uji.json', 'w') as file:
-        json.dump(real_class_uji, file)
 
     unclass_data_uji_token = {}
 
@@ -254,6 +259,16 @@ def hasilKlasifikasi():
                     uniq.append(val)
             unclass_data_uji_token[key]=uniq
 
+    probabilitas={}
+    hoa = 0
+    vali = 0
+    for item in data_latih:
+        if item["cat"]=='hoax':
+            hoa+=1
+            probabilitas[item['cat']]=hoa
+        if item["cat"] == 'valid':
+            vali+=1
+            probabilitas[item['cat']]=vali
 
     hasil_posterior = []
     another_d=[]
@@ -263,19 +278,17 @@ def hasilKlasifikasi():
             # print(len(conproba))
             tes = []
             value = {}
+            con = 1
             for val in conproba[key]:
                 if val in unclass_data_uji_token[judul]:
-                    con = 1
                     con*=conproba[key][val]
+                    # print(con)
+            con*= probabilitas[key]/len(data_latih)
             another_d.append([key,con])
         hasil_posterior.append(another_d[:len(conproba)])
         for i in range(len(conproba)):
             another_d.pop()
-
-
-    tesa = []
-    tesb = []
-
+    print(hasil_posterior)
     j=0
     posterior_judul={}
     final_clasifikasi = {}
@@ -284,46 +297,58 @@ def hasilKlasifikasi():
             label=hasil_posterior[j][i][0]
             value=hasil_posterior[j][i][1]
             posterior_judul[label]=value
-        final_clasifikasi[judul]=max(posterior_judul,key=posterior_judul.get)
-        j+=1
+        if max(posterior_judul.values()) == 0:
+            final_clasifikasi[judul]='Overflow'
+        else:
+            final_clasifikasi[judul]=max(posterior_judul,key=posterior_judul.get)
 
-    if os.path.exists('../static/final_clasifikasi.json'):
-        os.remove('../static/final_clasifikasi.json')
-    with open('../static/final_clasifikasi.json', 'w') as file:
-        json.dump(final_clasifikasi, file)
+        j+=1
+    print(posterior_judul)
+    return final_clasifikasi
+
+# openFile(path_offData,ratio=2/10)
+#
+with open('../static/data_uji.json') as f:
+    data_uji = json.load(f)
 
 with open('../static/data_latih.json') as f:
     data_latih = json.load(f)
 
-openFile(path_offData,ratio=2/10)
-berita_terkategori(data_latih)
-termUnik()
+# berita_terkategori(data_latih)
+# termUnik()
 weighted_berita()
 conProbability()
 
-with open('../static/real_class_uji.json') as f:
-    real_class_uji = json.load(f)
-with open('../static/final_clasifikasi.json') as f:
-    final_clasifikasi = json.load(f)
+real_class_uji = {}
+for item in data_uji:
+    real_class_uji[item['judul']]=item['cat']
 
-unclassDataUji()
-hasilKlasifikasi()
+unclassDatauji()
+final_clasifikasi = hasilKlasifikasi()
+real_uji_clss = real_class_uji
 
+overflow=0
 hasil_salah = 0
 hasil_benar = 0
 for item in final_clasifikasi:
     print(item)
     print(f"hasil_klasifikasi: {final_clasifikasi[item]}"
           f"\nklasifikasi seharusnya:{real_class_uji[item]}")
-    if real_class_uji[item] != final_clasifikasi[item]:
-        print('TIDAK BENAR')
-        hasil_salah+=1
-    else:
+    if real_class_uji[item] == final_clasifikasi[item]:
         print('BENAR')
         hasil_benar+=1
+    elif final_clasifikasi[item] == 'Overflow':
+        print('Overflow')
+        overflow+=1
+    else:
+        print('TIDAK BENAR')
+        hasil_salah +=1
 
 print(f"\nHASIL KLASIFIKASI BENAR DAN SALAH:\n"
       f"Benar:{hasil_benar}\n"
-      f"Salah:{hasil_salah}\n")
+      f"Salah:{hasil_salah}\n"
+      f"Overflow:{overflow}")
+
+
 
 print("Program end at = ", datetime.now().time())
