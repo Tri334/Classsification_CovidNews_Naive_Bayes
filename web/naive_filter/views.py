@@ -38,8 +38,8 @@ def home(request):
                     hoax = term.hoax
                     print(term.term_unik)
                     valid = term.valid
-            except: print('not found item')
-        print(f"hoax:{hoax}"
+            except: print('Kata tidak ditemukan')
+        print(f"hoax:{hoax}\n"
               f"valid:{valid}\n")
         print(prepro)
         hasil_klasifikasi['hoax']=hoax*probabilitas_hoax
