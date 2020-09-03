@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Data
+from fractions import Fraction
 from .tests import *
 from .form import *
 import json
@@ -35,9 +35,9 @@ def home(request):
             try:
                 if TermUnikValue.objects.get(term_unik=item):
                     term = TermUnikValue.objects.get(term_unik=item)
-                    hoax = term.hoax
+                    hoax = Fraction(term.hoax)
                     print(term.term_unik)
-                    valid = term.valid
+                    valid = Fraction(term.valid)
             except: print('Kata tidak ditemukan')
         print(f"hoax:{hoax}\n"
               f"valid:{valid}\n")
@@ -45,9 +45,10 @@ def home(request):
         hasil_klasifikasi['hoax']=hoax*probabilitas_hoax
         hasil_klasifikasi['valid']=valid*probabilitas_valid
         if max(hasil_klasifikasi.values()) == 0:
-            hasil='Overflow'
+            hasil='Tidak Diketahui'
         else:
             hasil=max(hasil_klasifikasi,key=hasil_klasifikasi.get)
+    print(hasil)
 
 
     context = {'form': form,'hasil':hasil}
@@ -58,15 +59,32 @@ def home(request):
 
 def admin(request):
     form = DataForm()
+    duplikat = 'Aman'
+    status = ''
+    data_hoax = Data.objects.filter(cat='hoax').count()
+    data_valid = Data.objects.filter(cat='valid').count()
 
     if request.method == "POST":
-        # print('Printing Post:', request.POST)
-        form = DataForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('add_data')
+        post = request.POST
+        juduls = post['judul']
+        try:
+            if Data.objects.get(judul=juduls):
+                duplikat = 'Berita Duplikat'
+                status = 'notok'
+            else:
+                duplikat = 'Aman'
+                status = 'ok'
+        except:
+            status = 'ok'
 
-    context = {'form': form}
+        if status == 'ok' and duplikat == 'Aman':
+            form = DataForm(request.POST)
+            if form.is_valid():
+                print('form di save',request.POST)
+                # form.save()
+                return redirect('add_data')
+
+    context = {'form': form, 'duplikat': duplikat, 'datahoax': data_hoax, 'datavalid': data_valid}
 
     return render(request, 'home/admin_page.html', context)
 

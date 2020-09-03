@@ -11,7 +11,7 @@ class Data(models.Model):
 
 class TermUnikValue(models.Model):
     term_unik = models.CharField(blank=False, null=False, max_length=150)
-    valid = models.FloatField(blank=False, null=False)
-    hoax = models.FloatField(blank=False, null=False)
+    valid = models.CharField(blank=False, null=False, max_length=10000000)
+    hoax = models.CharField(blank=False, null=False,max_length=10000000)
 
 

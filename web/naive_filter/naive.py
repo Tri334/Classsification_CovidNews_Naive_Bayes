@@ -1,8 +1,10 @@
 from bs4 import BeautifulSoup as sp
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 import re
+from fractions import Fraction
 import json
 from datetime import datetime
+import numpy
 import os
 import math
 
@@ -21,6 +23,7 @@ def preprocessing(berita):
     cleaning_words = re.sub(subs2, " ", berita)
     cleaning_words = re.sub(subs3, " ", cleaning_words)
     cleaning_words = re.sub(substwith, " ", cleaning_words)
+    cleaning_words = re.sub(subs3, " ", cleaning_words)
     clean = cleaning_words.lower()
     tokenize = clean.split()
     token = " ".join(tokenize)
@@ -32,7 +35,7 @@ def openFile(pathdata,ratio):
     dupli = open('../offData/duplikat.txt', "a")
     all_data=[]
     list_judul = []
-    file = open(pathdata, encoding="utf8")
+    file = open(pathdata, encoding="UTF-8")
     soup = sp(file,'html5lib')
     doc_berita = soup.find_all("doc")
     for item in doc_berita:
@@ -100,8 +103,6 @@ def openFile(pathdata,ratio):
     data_uji = uji_hoax + uji_valid
     data_latih = data_hoax + data_valid
 
-
-
     if os.path.exists('../static/data_uji.json'):
         os.remove('../static/data_uji.json')
     with open('../static/data_uji.json', 'w') as uji:
@@ -117,7 +118,9 @@ def openFile(pathdata,ratio):
     with open('../static/data_balance.json', 'w') as balance:
         json.dump(data_balance,balance)
 
-def berita_terkategori(data):
+def berita_terkategori():
+    with open('../static/data_latih.json') as f:
+        data = json.load(f)
     berita = {}
     berita_hoax=[]
     berita_valid=[]
@@ -183,7 +186,7 @@ def weighted_berita():
                     score += 1
             if score ==0:
                 tes[term_unik[i]] = score
-            else:tes[term_unik[i]] = 1+math.log10(score)
+            else:tes[term_unik[i]] =score
             waight_temp.append(score)
         weight_cat_dict[key] = tes
 
@@ -212,7 +215,7 @@ def conProbability():
         for value in weight_cat_dict[key]:
             poss_term = weight_cat_dict[key][value]
             p_kata = (poss_term + 1) / (count_fitur[key] + len(term_unik))
-            temp[value] = p_kata
+            temp[value] = str(Fraction(p_kata))
         conproba[key] = temp
 
     if os.path.exists('../static/conproba.json'):
@@ -277,18 +280,21 @@ def hasilKlasifikasi():
         for key in conproba:
             # print(len(conproba))
             tes = []
-            value = {}
+            value = []
             con = 1
             for val in conproba[key]:
                 if val in unclass_data_uji_token[judul]:
-                    con*=conproba[key][val]
-                    # print(con)
-            con*= probabilitas[key]/len(data_latih)
+                    con = Fraction(conproba[key][val])
+                    tes.append(con)
+
+            con= math.prod(tes)
+            # print(con)
+            # print('\n')
             another_d.append([key,con])
         hasil_posterior.append(another_d[:len(conproba)])
         for i in range(len(conproba)):
             another_d.pop()
-    print(hasil_posterior)
+    # print(hasil_posterior)
     j=0
     posterior_judul={}
     final_clasifikasi = {}
@@ -303,52 +309,49 @@ def hasilKlasifikasi():
             final_clasifikasi[judul]=max(posterior_judul,key=posterior_judul.get)
 
         j+=1
-    print(posterior_judul)
+    # print(posterior_judul)
     return final_clasifikasi
 
-# openFile(path_offData,ratio=2/10)
-#
-with open('../static/data_uji.json') as f:
-    data_uji = json.load(f)
-
-with open('../static/data_latih.json') as f:
-    data_latih = json.load(f)
-
-# berita_terkategori(data_latih)
+openFile(path_offData,ratio=2/10)
+berita_terkategori()
 # termUnik()
-weighted_berita()
-conProbability()
+# weighted_berita()
+# conProbability()
+# unclassDatauji()
 
-real_class_uji = {}
-for item in data_uji:
-    real_class_uji[item['judul']]=item['cat']
 
-unclassDatauji()
-final_clasifikasi = hasilKlasifikasi()
-real_uji_clss = real_class_uji
+def testing():
+    with open('../static/data_uji.json') as f:
+        data_uji = json.load(f)
+    real_class_uji = {}
+    for item in data_uji:
+        real_class_uji[item['judul']] = item['cat']
 
-overflow=0
-hasil_salah = 0
-hasil_benar = 0
-for item in final_clasifikasi:
-    print(item)
-    print(f"hasil_klasifikasi: {final_clasifikasi[item]}"
-          f"\nklasifikasi seharusnya:{real_class_uji[item]}")
-    if real_class_uji[item] == final_clasifikasi[item]:
-        print('BENAR')
-        hasil_benar+=1
-    elif final_clasifikasi[item] == 'Overflow':
-        print('Overflow')
-        overflow+=1
-    else:
-        print('TIDAK BENAR')
-        hasil_salah +=1
+    final_clasifikasi = hasilKlasifikasi()
 
-print(f"\nHASIL KLASIFIKASI BENAR DAN SALAH:\n"
-      f"Benar:{hasil_benar}\n"
-      f"Salah:{hasil_salah}\n"
-      f"Overflow:{overflow}")
+    overflow=0
+    hasil_salah = 0
+    hasil_benar = 0
+    for item in final_clasifikasi:
+        print(item)
+        print(f"hasil_klasifikasi: {final_clasifikasi[item]}"
+              f"\nklasifikasi seharusnya:{real_class_uji[item]}")
+        if real_class_uji[item] == final_clasifikasi[item]:
+            print('BENAR')
+            hasil_benar+=1
+        elif final_clasifikasi[item] == 'Overflow':
+            print('Overflow')
+            overflow+=1
+        else:
+            print('TIDAK BENAR')
+            hasil_salah +=1
 
+    print(f"\nHASIL KLASIFIKASI BENAR DAN SALAH:\n"
+          f"Benar:{hasil_benar}\n"
+          f"Salah:{hasil_salah}\n"
+          f"Undifined:{overflow}")
+
+# testing()
 
 
 print("Program end at = ", datetime.now().time())
